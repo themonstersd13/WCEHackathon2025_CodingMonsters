@@ -115,6 +115,9 @@ def detect_vehicles_in_roi(frame, roi_top_left, roi_bottom_right):
 
     return roi_count
 
+# Store last detected counts to prevent flickering
+last_roi_counts = [0, 0, 0, 0]  # [cap1, cap2, cap3, cap4]
+
 while True:
     frame_count += 1
 
@@ -127,16 +130,36 @@ while True:
     if not ret1 or not ret2 or not ret3 or not ret4:
         break
 
-    # Process every nth frame
-    if frame_count % nth_frame == 0:
-        roi_count1 = detect_vehicles_in_roi(frame1, roi_top_left, roi_bottom_right)
-        roi_count2 = detect_vehicles_in_roi(frame2, roi_top_left, roi_bottom_right)
-        roi_count3 = detect_vehicles_in_roi(frame3, roi_top_left, roi_bottom_right)
-        roi_count4 = detect_vehicles_in_roi(frame4, roi_top_left, roi_bottom_right)
+    # Always draw ROI boxes to avoid flickering
+    cv2.rectangle(frame1, roi_top_left, roi_bottom_right, (0, 255, 255), 2)
+    cv2.rectangle(frame2, roi_top_left, roi_bottom_right, (0, 255, 255), 2)
+    cv2.rectangle(frame3, roi_top_left, roi_bottom_right, (0, 255, 255), 2)
+    cv2.rectangle(frame4, roi_top_left, roi_bottom_right, (0, 255, 255), 2)
 
-        # Write the ROI counts to a file (updated each nth frame)
+    # Run detection only on every nth frame
+    if frame_count % nth_frame == 0:
+        last_roi_counts[0] = detect_vehicles_in_roi(frame1, roi_top_left, roi_bottom_right)
+        last_roi_counts[1] = detect_vehicles_in_roi(frame2, roi_top_left, roi_bottom_right)
+        last_roi_counts[2] = detect_vehicles_in_roi(frame3, roi_top_left, roi_bottom_right)
+        last_roi_counts[3] = detect_vehicles_in_roi(frame4, roi_top_left, roi_bottom_right)
+
+        # Write the latest ROI counts to the file
         with open("carsCount.txt", "w") as f:
-            f.write(f"{roi_count1} {roi_count2} {roi_count3} {roi_count4}")
+            f.write(f"{last_roi_counts[0]} {last_roi_counts[1]} {last_roi_counts[2]} {last_roi_counts[3]}")
+
+    # Always display the last detected ROI count to prevent flickering
+    cv2.putText(frame1, f"ROI Count: {last_roi_counts[0]}",
+                (roi_top_left[0], roi_top_left[1] - 10),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+    cv2.putText(frame2, f"ROI Count: {last_roi_counts[1]}",
+                (roi_top_left[0], roi_top_left[1] - 10),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+    cv2.putText(frame3, f"ROI Count: {last_roi_counts[2]}",
+                (roi_top_left[0], roi_top_left[1] - 10),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+    cv2.putText(frame4, f"ROI Count: {last_roi_counts[3]}",
+                (roi_top_left[0], roi_top_left[1] - 10),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
 
     # Resize frames for a 2×2 grid display
     frame1_resized = cv2.resize(frame1, (640, 480))
