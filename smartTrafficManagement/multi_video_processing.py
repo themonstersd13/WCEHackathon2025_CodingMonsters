@@ -31,25 +31,41 @@ NMS_THRESH = 0.4   # NMS threshold
 # ---------------------------
 # Video Capture Initialization
 # ---------------------------
-cap1 = cv2.VideoCapture("road_video1.mp4")
-cap2 = cv2.VideoCapture("road_video2.mp4")
+# cap1 = cv2.VideoCapture("road_video1.mp4")
+# cap2 = cv2.VideoCapture("road_video2.mp4")
 cap3 = cv2.VideoCapture("road_video3.mp4")
 cap4 = cv2.VideoCapture("road_video4.mp4")
 
-# ---------------------------
-# ROI Definitions
-# ---------------------------
-roi_top_left = (50, 100)
-roi_bottom_right = (300, 400)
 
-# Process every nth frame
+cap1 = cv2.VideoCapture("./sampleVideos/demo.mp4")
+cap2 = cv2.VideoCapture("./sampleVideos/demo2.mp4")
+# cap3 = cv2.VideoCapture("./sampleVideos/demo3.mp4")
+# cap4 = cv2.VideoCapture("./sampleVideos/Video.mp4")
+
+roi_cam3 = ((50, 100), (300, 400))   # top-left, bottom-right for camera 3
+roi_cam4 = ((50, 100), (300, 400)) 
+
+# ---------------------------
+# Separate ROI Definitions
+# ---------------------------
+# Adjust these coordinates individually for each camera's perspective.
+roi_cam1 = ((200, 100), (500, 600))   # top-left, bottom-right for camera 1
+roi_cam2 = ((100, 100), (580, 680))   # top-left, bottom-right for camera 2
+# roi_cam3 = ((50, 100), (600, 630))   # top-left, bottom-right for camera 3
+# roi_cam4 = ((400, 50), (800, 500))   # top-left, bottom-right for camera 4
+# roi_top_left = (50, 100)
+# roi_bottom_right = (300, 400)
+# Process every nth frame (for efficiency)
 nth_frame = 15
 frame_count = 0
 
+# Store last detected counts to prevent flickering (one per camera)
+last_roi_counts = [0, 0, 0, 0]  # [cap1, cap2, cap3, cap4]
+
 def detect_vehicles_in_roi(frame, roi_top_left, roi_bottom_right):
     """
-    Run YOLO detection on a single frame, filter for vehicles, 
-    and count how many bounding boxes fall fully (based on center) in the ROI.
+    Run YOLO detection on a single frame, filter for vehicles,
+    and count how many bounding boxes overlap with the ROI.
     """
     (H, W) = frame.shape[:2]
 
@@ -72,7 +88,6 @@ def detect_vehicles_in_roi(frame, roi_top_left, roi_bottom_right):
 
             # Filter for strong detections and relevant vehicle classes
             if confidence > CONF_THRESH and classes[class_id] in vehicle_classes:
-                # YOLO gives box coords relative to image size
                 center_x = int(detection[0] * W)
                 center_y = int(detection[1] * H)
                 w = int(detection[2] * W)
@@ -91,8 +106,7 @@ def detect_vehicles_in_roi(frame, roi_top_left, roi_bottom_right):
     if len(idxs) > 0:
         for i in idxs.flatten():
             x, y, w, h = boxes[i]
-            class_id = class_ids[i]
-            label = classes[class_id]
+            label = classes[class_ids[i]]
             conf = confidences[i]
 
             # Draw bounding box and label
@@ -100,20 +114,17 @@ def detect_vehicles_in_roi(frame, roi_top_left, roi_bottom_right):
             cv2.putText(frame, f"{label} {conf:.2f}", (x, y - 5),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-            # Count if the center of the bounding box is within the ROI
-            # bb_center_x = x + w // 2
-            # bb_center_y = y + h // 2
-            # if (roi_top_left[0] <= bb_center_x <= roi_bottom_right[0] and
-            #     roi_top_left[1] <= bb_center_y <= roi_bottom_right[1]):
-            #     roi_count += 1
-
+            # Check overlap between the bounding box and the ROI
             roi_x1, roi_y1 = roi_top_left
             roi_x2, roi_y2 = roi_bottom_right
-            box_x1, box_y1, box_x2, box_y2 = x, y, x+w, y+h
+            box_x1, box_y1, box_x2, box_y2 = x, y, x + w, y + h
+
             overlap_x1 = max(roi_x1, box_x1)
             overlap_y1 = max(roi_y1, box_y1)
             overlap_x2 = min(roi_x2, box_x2)
             overlap_y2 = min(roi_y2, box_y2)
+
+            # If there's any positive overlap, count it
             if overlap_x2 > overlap_x1 and overlap_y2 > overlap_y1:
                 roi_count += 1
 
@@ -124,9 +135,6 @@ def detect_vehicles_in_roi(frame, roi_top_left, roi_bottom_right):
                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
 
     return roi_count
-
-# Store last detected counts to prevent flickering
-last_roi_counts = [0, 0, 0, 0]  # [cap1, cap2, cap3, cap4]
 
 while True:
     frame_count += 1
@@ -140,35 +148,48 @@ while True:
     if not ret1 or not ret2 or not ret3 or not ret4:
         break
 
-    # Always draw ROI boxes to avoid flickering
-    cv2.rectangle(frame1, roi_top_left, roi_bottom_right, (0, 255, 255), 2)
-    cv2.rectangle(frame2, roi_top_left, roi_bottom_right, (0, 255, 255), 2)
-    cv2.rectangle(frame3, roi_top_left, roi_bottom_right, (0, 255, 255), 2)
-    cv2.rectangle(frame4, roi_top_left, roi_bottom_right, (0, 255, 255), 2)
+    # Draw ROI boxes on all frames (to avoid flickering)
+    cv2.rectangle(frame1, roi_cam1[0], roi_cam1[1], (0, 255, 255), 2)
+    cv2.rectangle(frame2, roi_cam2[0], roi_cam2[1], (0, 255, 255), 2)
+    cv2.rectangle(frame3, roi_cam3[0], roi_cam3[1], (0, 255, 255), 2)
+    cv2.rectangle(frame4, roi_cam4[0], roi_cam4[1], (0, 255, 255), 2)
 
     # Run detection only on every nth frame
     if frame_count % nth_frame == 0:
-        last_roi_counts[0] = detect_vehicles_in_roi(frame1, roi_top_left, roi_bottom_right)
-        last_roi_counts[1] = detect_vehicles_in_roi(frame2, roi_top_left, roi_bottom_right)
-        last_roi_counts[2] = detect_vehicles_in_roi(frame3, roi_top_left, roi_bottom_right)
-        last_roi_counts[3] = detect_vehicles_in_roi(frame4, roi_top_left, roi_bottom_right)
+        # Camera 1
+        last_roi_counts[0] = detect_vehicles_in_roi(
+            frame1, roi_cam1[0], roi_cam1[1]
+        )
+        # Camera 2
+        last_roi_counts[1] = detect_vehicles_in_roi(
+            frame2, roi_cam2[0], roi_cam2[1]
+        )
+        # Camera 3
+        last_roi_counts[2] = detect_vehicles_in_roi(
+            frame3, roi_cam3[0], roi_cam3[1]
+        )
+        # Camera 4
+        last_roi_counts[3] = detect_vehicles_in_roi(
+            frame4, roi_cam4[0], roi_cam4[1]
+        )
 
-        # Write the latest ROI counts to the file
+        # Write the latest ROI counts to a file
         with open("carsCount.txt", "w") as f:
-            f.write(f"{last_roi_counts[0]} {last_roi_counts[1]} {last_roi_counts[2]} {last_roi_counts[3]}")
+            f.write(f"{last_roi_counts[0]} {last_roi_counts[1]} "
+                    f"{last_roi_counts[2]} {last_roi_counts[3]}")
 
-    # Always display the last detected ROI count to prevent flickering
+    # Always display the last detected ROI count (no flickering)
     cv2.putText(frame1, f"ROI Count: {last_roi_counts[0]}",
-                (roi_top_left[0], roi_top_left[1] - 10),
+                (roi_cam1[0][0], roi_cam1[0][1] - 10),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
     cv2.putText(frame2, f"ROI Count: {last_roi_counts[1]}",
-                (roi_top_left[0], roi_top_left[1] - 10),
+                (roi_cam2[0][0], roi_cam2[0][1] - 10),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
     cv2.putText(frame3, f"ROI Count: {last_roi_counts[2]}",
-                (roi_top_left[0], roi_top_left[1] - 10),
+                (roi_cam3[0][0], roi_cam3[0][1] - 10),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
     cv2.putText(frame4, f"ROI Count: {last_roi_counts[3]}",
-                (roi_top_left[0], roi_top_left[1] - 10),
+                (roi_cam4[0][0], roi_cam4[0][1] - 10),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
 
     # Resize frames for a 2×2 grid display
@@ -183,7 +204,7 @@ while True:
 
     cv2.imshow("Combined 4 Videos - YOLO Vehicle Detection", combined_frame)
 
-    # Using waitKey(1) to reduce delay between frames
+    # Exit if 'q' is pressed
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
