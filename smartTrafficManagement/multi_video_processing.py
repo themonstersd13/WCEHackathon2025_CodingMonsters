@@ -101,10 +101,20 @@ def detect_vehicles_in_roi(frame, roi_top_left, roi_bottom_right):
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
             # Count if the center of the bounding box is within the ROI
-            bb_center_x = x + w // 2
-            bb_center_y = y + h // 2
-            if (roi_top_left[0] <= bb_center_x <= roi_bottom_right[0] and
-                roi_top_left[1] <= bb_center_y <= roi_bottom_right[1]):
+            # bb_center_x = x + w // 2
+            # bb_center_y = y + h // 2
+            # if (roi_top_left[0] <= bb_center_x <= roi_bottom_right[0] and
+            #     roi_top_left[1] <= bb_center_y <= roi_bottom_right[1]):
+            #     roi_count += 1
+
+            roi_x1, roi_y1 = roi_top_left
+            roi_x2, roi_y2 = roi_bottom_right
+            box_x1, box_y1, box_x2, box_y2 = x, y, x+w, y+h
+            overlap_x1 = max(roi_x1, box_x1)
+            overlap_y1 = max(roi_y1, box_y1)
+            overlap_x2 = min(roi_x2, box_x2)
+            overlap_y2 = min(roi_y2, box_y2)
+            if overlap_x2 > overlap_x1 and overlap_y2 > overlap_y1:
                 roi_count += 1
 
     # Draw the ROI rectangle and display the count
