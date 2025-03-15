@@ -2,7 +2,7 @@ import serial
 import time
 
 # Adjust the serial port as needed (e.g., '/dev/ttyACM0' for Linux or 'COM3' for Windows)
-ser = serial.Serial('/dev/ttyACM1', 9600, timeout=1)
+ser = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
 time.sleep(2)  # Allow time for the serial connection to initialize
 
 filename = "carsCount.txt"
