@@ -1,17 +1,19 @@
-# Multi-Video Processing with OpenCV
+# Smart Traffic Signal Management
 
-This project demonstrates how to process multiple videos simultaneously using OpenCV. The script applies background subtraction to detect moving objects in each video stream.
+This project demonstrates how to process multiple videos simultaneously using OpenCV. The script applies background subtraction to detect moving objects in each video stream. Controls traffic signals with the help of an Arduino Uno.
 
 ## Features
 - Reads multiple video files.
 - Applies background subtraction using OpenCV's `createBackgroundSubtractorMOG2`.
 - Displays processed video frames with moving objects highlighted.
+- Controls traffic signals with the help of an Arduino Uno.
 
 ## Prerequisites
 Ensure you have the following installed on your system:
 - Python 3.x
 - OpenCV
 - NumPy
+- Pyserial
 
 ## Installation
 1. **Install Python** (if not already installed)
